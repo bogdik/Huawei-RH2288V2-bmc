@@ -1,4 +1,4 @@
-import requests,os,warnings,time,sys
+import requests,os,warnings,time,sys,re,shutil
 
 if len(sys.argv)>1 and sys.argv[1]:
     ip = sys.argv[1]
@@ -39,10 +39,36 @@ def getData(ip,login,password):
             print('Loggined')
             res = session.get('https://' + ip + '/index.asp', headers=headers)
             if 'bottom.asp' in res.text:
-                res = session.get('https://' + ip + '/kvmvmm.asp?kvmmode=1&IEType=i586', headers=headers)
-                if 'verifyValue' in res.text and 'typeData' in res.text:
-                    fkey=res.text.split('verifyValue" VALUE="')[1].split('">')[0]
-                    lkey = res.text.split('typeData" VALUE="')[1].split('">')[0]
+                res = session.get('https://' + ip + '/kvmvmm.asp?kvmmode=1', headers=headers)
+                if ('verifyValue' in res.text or 'VERIFYVALUE' in res.text) and ('typeData' in res.text or 'TYPEDATA' in res.text):
+                    if m := re.search(r'verifyvalue*.+value*.+=*.+(\'|\")(.+)(\'|\")', res.text,re.I):
+                        print('Finded First Key')
+                        if m.group(2):
+                            fkey=m.group(2)
+                    if m := re.search(r'typedata*.+value*.+=*.+(\'|\")(.+)(\'|\")', res.text,re.I):
+                        print('Finded Second Key')
+                        if m.group(2):
+                            lkey=m.group(2)
+                    #fkey=res.text.split('verifyValue" VALUE="')[1].split('">')[0]
+                    #lkey = res.text.split('typeData" VALUE="')[1].split('">')[0]
+                    dwnld='jar'
+                    file='vconsole.jar'
+                    if m := re.search(r'codebase*.+value*.+=*.+(\'|\")(.+)(\'|\")', res.text,re.I):
+                        print('Finded path KVM')
+                        if m.group(2):
+                            dwnld=m.group(2)
+                    else:
+                        print('No finded path KVM')
+                    if m := re.search(r'archive*.value*.=*.(\'|\")(.+)(\'|\")', res.text,re.I):
+                        print('Finded file KVM')
+                        if m.group(2):
+                            file=m.group(2)
+                    else:
+                        print('No finded path KVM')
+                    print('Try get '+'https://' + ip + '/'+dwnld+'/'+file)
+                    response = session.get('https://' + ip + '/'+dwnld+'/'+file, stream=True)
+                    with open(file, 'wb') as out_file:
+                        shutil.copyfileobj(response.raw, out_file)
                     print(fkey)
                     print(lkey)
                     return {'ip':ip,'fkey':fkey,'lkey':lkey}
@@ -74,6 +100,7 @@ def setFile(ip,fkey,lkay):
 				<param name="vmmPort" value="8208"/>
 				<param name="privilege" value="4"/>
 				<param name="bladesize" value="1">
+				<param name="productType" value="BMC">
 				<param name="ietype" value="i586">
 				<param name="IPA" value="%s"/>
 				<param name="IPB" value="%s"/>
@@ -86,7 +113,6 @@ def setFile(ip,fkey,lkay):
 		</jnlp>''' %(ip,ip,fkey,fkey,lkay,ip,ip,ip))
         fp.close()
         return 'kvm.jnlp'
-
     return False
 
 dt=getData(ip,login,password)
