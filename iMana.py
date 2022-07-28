@@ -71,12 +71,12 @@ def getData(ip,login,password):
                         shutil.copyfileobj(response.raw, out_file)
                     print(fkey)
                     print(lkey)
-                    return {'ip':ip,'fkey':fkey,'lkey':lkey}
+                    return {'ip':ip,'fkey':fkey,'lkey':lkey,'file':file}
         else:
             print('No loggined, tryed')
     return False
 
-def setFile(ip,fkey,lkay):
+def setFile(ip,fkey,lkay,finame):
     with open('kvm.jnlp', 'w') as fp:
         fp.write('''<?xml version="1.0" encoding="UTF-8"?>
 		<jnlp spec="1.0+" codebase="">
@@ -86,7 +86,7 @@ def setFile(ip,fkey,lkay):
 			</information>
 			<resources>
 				<j2se version="1.6" />
-				<jar href="vconsole.jar" main="true"/>
+				<jar href="%s" main="true"/>
 			</resources>
 			<applet-desc name="Remote Virtual Console(%s)" main-class="com.kvm.KVMApplet" width="950" height="700" >
 				<param name="verifyValue" value="%s"/>
@@ -110,7 +110,7 @@ def setFile(ip,fkey,lkay):
 			<security>
 				<all-permissions/>
 			</security>
-		</jnlp>''' %(ip,ip,fkey,fkey,lkay,ip,ip,ip))
+		</jnlp>''' %(ip,finame,ip,fkey,fkey,lkay,ip,ip,ip))
         fp.close()
         return 'kvm.jnlp'
     return False
@@ -119,7 +119,7 @@ dt=getData(ip,login,password)
 while not dt:
     dt = getData(ip, login, password)
 if dt and 'fkey' in dt.keys():
-    setFile(ip, dt['fkey'], dt['lkey'])
+    setFile(ip, dt['fkey'], dt['lkey'], dt['file'])
     if os.path.isfile('kvm.jnlp'):
         os.system('javaws ./kvm.jnlp')
         os.remove('kvm.jnlp')
